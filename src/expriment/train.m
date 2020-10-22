@@ -1,12 +1,12 @@
 function train(env, agents, nEpisodes, logFileName)
     nAgents = length(agents);
     % 2ではなく行動数
-    episode_histories=zeros(nEpisodes+1,nAgents*2);
+    episodeHistories=zeros(nEpisodes+1,nAgents*2);
     for a = 1:nAgents
         policy(a) = values(agents(a).policyMap);
     end
     policy = cell2mat(policy);
-    episode_histories(1,:) = policy;
+    episodeHistories(1,:) = policy;
     for n = 1:nEpisodes
         states = env.reset();
         totalReward = zeros(1,nAgents);
@@ -31,7 +31,7 @@ function train(env, agents, nEpisodes, logFileName)
             policy(a) = values(agents(a).policyMap);
         end
         policy = cell2mat(policy);
-        episode_histories(n+1,:) = policy;
+        episodeHistories(n+1,:) = policy;
     end
-    csvwrite(logFileName, episode_histories)
+    csvwrite(logFileName, episodeHistories)
 end
