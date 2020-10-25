@@ -1,11 +1,11 @@
 addpath src/agent
 addpath src/env
 addpath src/expriment/
-addpath src/evolutionaly_dynamics
+addpath src/evolutionary_dynamics
 Main() %メイン関数のみ
 
 function Main()
-    class = 3;
+    class = 1;
     if class == 1
         matrixes = cat(3, [1,5;0,3], [1,5;0,3]);
     elseif class == 2
@@ -21,20 +21,19 @@ function Main()
     alpha = 0.01;
     taus = [1,2,10];
     interval = 0.05;
-    n_episodes = 1000;
+    n_episodes = 10;
     mutationRateValues = [0.01, 0.05, 0.1, 0.2, 0.25];
     % 戦略(0.1, 0.9),(0.9, 0.1), (0.3, 0.3), (0.7, 0.7), (0.5, 0.7),
     % (0.7, 0.5), (0.7, 0.3), (0.3, 0.7)
-    initQValues = [[[0;2],[2;0]],[[2;0],[0;2]],[[0;1],[0;1]],[[1;0],[1;0]],[[0;0],[1;0]],[[1;0],[0;0]],[[1;0],[0;1]],[[0;1],[1;0]]];
-    initPopulations = [[[0.1; 0.9],[0.9; 0.1]],[[0.1; 0.9], [0.1; 0.9]],[[0.9; 0.1], [0.9; 0.1]],[[0.9; 0.1], [0.1; 0.9]], ...
-        [[0.3; 0.7], [0.7; 0.3]], [[0.3; 0.7], [0.3; 0.7]], [[0.7; 0.3], [0.7; 0.3]], [[0.7; 0.3], [0.3; 0.7]], [[0.5; 0.5], [0.5; 0.5]]];
+    initQValues = cat(3,[[0;2],[2;0]],[[2;0],[0;2]],[[0;1],[0;1]],[[1;0],[1;0]],[[0;0],[1;0]],[[1;0],[0;0]],[[1;0],[0;1]],[[0;1],[1;0]]);
+    initPopulations = cat(3,[[0.1; 0.9],[0.9; 0.1]],[[0.1; 0.9], [0.1; 0.9]],[[0.9; 0.1], [0.9; 0.1]],[[0.9; 0.1], [0.1; 0.9]], ...
+        [[0.3; 0.7], [0.7; 0.3]], [[0.3; 0.7], [0.3; 0.7]], [[0.7; 0.3], [0.7; 0.3]], [[0.7; 0.3], [0.3; 0.7]], [[0.5; 0.5], [0.5; 0.5]]);
     tic;
     runReinforcementLearing(matrixes, alpha, taus, initQValues, n_episodes, logdir+"csvs/");
     toc;
     tic;
     calcQLearingDynamics(matrixes, alpha, taus, interval, logdir+"csvs/");
     toc;
-    
     tic;
     runReplicatorDynamics(matrixes, mutationRateValues, initPopulations, n_episodes, logdir+"csvs/");
     toc;
@@ -54,11 +53,11 @@ function runReinforcementLearing(matrixes, alpha, taus, initQValues, n_episodes,
         actionSelect = @(qValues) ActionSelect.boltzmannSelect(qValues, tau);
         agents(1) = QLearningAgent(alpha, gamma, actions, actionSelect);
         agents(2) = QLearningAgent(alpha, gamma, actions, actionSelect);
-        for qv = 1:2:length(initQValues)
-            agents(1).setQValue(MatrixEnv.ONLY_STATE, initQValues(:,qv).'/tau);
-            agents(2).setQValue(MatrixEnv.ONLY_STATE, initQValues(:,qv+1).'/tau);
+        for iq = 1:length(initQValues)
+            agents(1).setQValue(MatrixEnv.ONLY_STATE, initQValues(:,1,iq).'/tau);
+            agents(2).setQValue(MatrixEnv.ONLY_STATE, initQValues(:,2,iq).'/tau);
             logFileName = logdir + "q_learing_trajectory_tau_" + tau ...
-                + "_inits" + ((qv+1)/2) +".csv";
+                + "_inits" + iq +".csv";
             train(env, agents, n_episodes, logFileName);
         end
     end
@@ -79,15 +78,21 @@ function calcQLearingDynamics(matrixes, alpha, taus, interval, logdir)
 end
 
 function runReplicatorDynamics(matrixes, mutationRateValues, initPopulations, n_episodes, logdir)
+    % 何期回すか
+    N = 1000;
+    % 人口の変化量の加減
+    threshold = 0.00001;
+    % 人口更新の刻み幅
+    dt = 0.1;
     for i = 1:length(mutationRateValues)
         mutationValue = mutationRateValues(i);
-        mutationRate = [1, 1; 1, 1].*mutationValue;
-        mutationRate(:, :, 2) = [1, 1; 1, 1].*mutationValue;
+        mutationRate = ones(2).*mutationValue;
+        mutationRate(:, :, 2) = ones(2).*mutationValue;
         replicatorDynamics = @(populations) mutationReplicatorDynamics(matrixes, populations, mutationRate);
-        for ip = 1:2:length(initPopulations)
-            populations = initPopulations(:,ip:ip+1);
-            populationsHistories = culcDynamicsFor(replicatorDynamics, populations, 1000, 0.00001, 0.1);
-            logFileName = logdir + "replicator_dynamics_trajectory_mutaion_value_" + mutationValue + "_inits"+ ((ip+1)/2) +".csv";
+        for ip = 1:length(initPopulations)
+            populations = initPopulations(:,:,ip);
+            populationsHistories = culcDynamicsFor(replicatorDynamics, populations, N, threshold, dt);
+            logFileName = logdir + "replicator_dynamics_trajectory_mutaion_value_" + mutationValue + "_inits"+ ip +".csv";
             csvwrite(logFileName, populationsHistories);
         end
     end
@@ -96,8 +101,8 @@ end
 function calcReplicatorDynamics(matrixes, mutationRateValues, interval, logdir)
     for i = 1:length(mutationRateValues)
         mutationValue = mutationRateValues(i);
-        mutationRate = [1, 1; 1, 1].*mutationValue;
-        mutationRate(:, :, 2) = [1, 1; 1, 1].*mutationValue;
+        mutationRate = ones(2).*mutationValue;
+        mutationRate(:, :, 2) = ones(2).*mutationValue;
         replicatorDynamics = @(x1, y1) mutationReplicatorDynamics(matrixes, [[x1;1-x1],[y1;1-y1]], mutationRate);
         [x,y] = meshgrid(interval:interval:1-interval,interval:interval:1-interval);
         replicators = arrayfun(replicatorDynamics, x, y,'UniformOutput',false);
@@ -142,9 +147,9 @@ function plotFigure(alpha, taus, initQValues, initPopulations, mutationRateValue
         tau = taus(i);
         clf
         hold on
-        for qv = 1:2:length(initQValues)
+        for iq = 1:length(initQValues)
             logFileName = csvsDir + "q_learing_trajectory_tau_" + tau ...
-            + "_inits" + ((qv+1)/2) +".csv";
+            + "_inits" + iq +".csv";
             policies = csvread(logFileName);
             x = policies(:,1);
             y = policies(:,3);
@@ -163,9 +168,9 @@ function plotFigure(alpha, taus, initQValues, initPopulations, mutationRateValue
         mutationValue = mutationRateValues(i);
         clf
         hold on
-        for ip = 1:2:length(initPopulations)
+        for ip = 1:length(initPopulations)
             logFileName = csvsDir + "replicator_dynamics_trajectory_mutaion_value_" + mutationValue ...
-                + "_inits"+ ((ip+1)/2) +".csv";
+                + "_inits"+ ip +".csv";
             populations = csvread(logFileName);
             x = populations(:,1);
             y = populations(:,3);
