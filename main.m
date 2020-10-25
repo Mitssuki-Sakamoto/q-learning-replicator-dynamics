@@ -21,7 +21,7 @@ function Main()
     alpha = 0.01;
     taus = [1,2,10];
     interval = 0.05;
-    n_episodes = 10;
+    n_episodes = 1000;
     mutationRateValues = [0.01, 0.05, 0.1, 0.2, 0.25];
     % 戦略(0.1, 0.9),(0.9, 0.1), (0.3, 0.3), (0.7, 0.7), (0.5, 0.7),
     % (0.7, 0.5), (0.7, 0.3), (0.3, 0.7)
@@ -83,12 +83,12 @@ function runReplicatorDynamics(matrixes, mutationRateValues, initPopulations, n_
     % 人口の変化量の加減
     threshold = 0.00001;
     % 人口更新の刻み幅
-    dt = 0.1;
+    dt = 0.5;
     for i = 1:length(mutationRateValues)
         mutationValue = mutationRateValues(i);
         mutationRate = ones(2).*mutationValue;
         mutationRate(:, :, 2) = ones(2).*mutationValue;
-        replicatorDynamics = @(populations) mutationReplicatorDynamics(matrixes, populations, mutationRate);
+        replicatorDynamics = @(populations) mutationReplicatorDynamics2(matrixes, populations, mutationRate);
         for ip = 1:length(initPopulations)
             populations = initPopulations(:,:,ip);
             populationsHistories = culcDynamicsFor(replicatorDynamics, populations, N, threshold, dt);
@@ -103,7 +103,7 @@ function calcReplicatorDynamics(matrixes, mutationRateValues, interval, logdir)
         mutationValue = mutationRateValues(i);
         mutationRate = ones(2).*mutationValue;
         mutationRate(:, :, 2) = ones(2).*mutationValue;
-        replicatorDynamics = @(x1, y1) mutationReplicatorDynamics(matrixes, [[x1;1-x1],[y1;1-y1]], mutationRate);
+        replicatorDynamics = @(x1, y1) mutationReplicatorDynamics2(matrixes, [[x1;1-x1],[y1;1-y1]], mutationRate);
         [x,y] = meshgrid(interval:interval:1-interval,interval:interval:1-interval);
         replicators = arrayfun(replicatorDynamics, x, y,'UniformOutput',false);
         dx1s = cellfun(@(dx1) dx1(1,1), replicators);
