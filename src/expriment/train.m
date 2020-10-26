@@ -1,4 +1,4 @@
-function train(env, agents, nEpisodes, logFileName)
+function episodeHistories = train(env, agents, nEpisodes, logFileName)
     nAgents = length(agents);
     % 2ではなく行動数
     episodeHistories=zeros(nEpisodes+1,nAgents*2);
@@ -33,5 +33,4 @@ function train(env, agents, nEpisodes, logFileName)
         policy = cell2mat(policy);
         episodeHistories(n+1,:) = policy;
     end
-    csvwrite(logFileName, episodeHistories)
 end

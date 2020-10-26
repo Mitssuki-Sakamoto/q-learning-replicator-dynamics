@@ -21,7 +21,7 @@ function Main()
     alpha = 0.01;
     taus = [1,2,10];
     interval = 0.05;
-    n_episodes = 1000;
+    n_episodes = 10;
     mutationRateValues = [0.01, 0.05, 0.1, 0.2, 0.25];
     % 戦略(0.1, 0.9),(0.9, 0.1), (0.3, 0.3), (0.7, 0.7), (0.5, 0.7),
     % (0.7, 0.5), (0.7, 0.3), (0.3, 0.7)
@@ -58,7 +58,8 @@ function runReinforcementLearing(matrixes, alpha, taus, initQValues, n_episodes,
             agents(2).setQValue(MatrixEnv.ONLY_STATE, initQValues(:,2,iq).'/tau);
             logFileName = logdir + "q_learing_trajectory_tau_" + tau ...
                 + "_inits" + iq +".csv";
-            train(env, agents, n_episodes, logFileName);
+            episodeHistories = train(env, agents, n_episodes, logFileName);
+            csvwrite(logFileName, episodeHistories);
         end
     end
 end
@@ -80,7 +81,7 @@ end
 function runReplicatorDynamics(matrixes, mutationRateValues, initPopulations, n_episodes, logdir)
     % 何期回すか
     N = 1000;
-    % 人口の変化量の加減
+    % 人口の変化量の下限
     threshold = 0.00001;
     % 人口更新の刻み幅
     dt = 0.5;
